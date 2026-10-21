@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MatchCore — an interactive DSA visualizer for Circular Queue and Deque based multiplayer matchmaking." />
+  <title>MatchCore — DSA Matchmaking Simulator</title>
+  <style>
+:root {
+  --bg: #080b10;
+  --bg-soft: #0d1118;
+  --panel: rgba(16, 21, 30, 0.82);
+  --panel-strong: #111721;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --text: #f5f7fb;
+  --muted: #8c97a7;
+  --green: #9cff3d;
+  --green-soft: rgba(156, 255, 61, 0.12);
+  --cyan: #45d8ff;
+  --amber: #ffb84d;
+  --red: #ff5d75;
+  --purple: #9c7cff;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% -10%, rgba(82, 255, 82, 0.11), transparent 33%),
+    radial-gradient(circle at 88% 38%, rgba(69, 216, 255, 0.08), transparent 24%),
+    var(--bg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button, input, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; text-decoration: none; }
+
+.noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  z-index: 20;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
+}
+
+.section-shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  height: 72px;
+  padding: 0 max(20px, calc((100vw - 1180px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: rgba(8, 11, 16, 0.72);
+  backdrop-filter: blur(18px);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; letter-spacing: -0.04em; }
+.brand-mark {
+  width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid rgba(156,255,61,.45);
+  color: var(--green); background: var(--green-soft); clip-path: polygon(12% 0,100% 0,100% 88%,88% 100%,0 100%,0 12%);
+}
+.brand-dot { color: var(--green); }
+.nav { display: flex; gap: 30px; color: #aeb7c4; font-size: 13px; }
+.nav a:hover { color: var(--text); }
+.status-pill { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: .14em; color: #c5cdd8; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 14px var(--green); }
+
+.hero { min-height: 690px; padding: 112px 0 70px; position: relative; }
+.hero::after {
+  content: "MATCHCORE";
+  position: absolute;
+  right: -28px;
+  top: 82px;
+  font-size: clamp(70px, 13vw, 170px);
+  font-weight: 900;
+  letter-spacing: -.08em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,255,255,.035);
+  pointer-events: none;
+}
+.eyebrow { color: var(--green); font-size: 11px; letter-spacing: .2em; font-weight: 800; margin-bottom: 18px; }
+.hero h1 { font-size: clamp(64px, 9vw, 126px); line-height: .82; margin: 0; letter-spacing: -.075em; max-width: 920px; position: relative; z-index: 1; }
+.hero h1 span { color: #77808f; }
+.hero-copy { max-width: 650px; margin: 34px 0 0; font-size: 18px; line-height: 1.75; color: #9aa5b4; }
+.hero-copy strong { color: #dfe6ee; font-weight: 650; }
+.hero-actions { display: flex; gap: 12px; margin-top: 34px; flex-wrap: wrap; }
+.btn {
+  min-height: 46px; border: 1px solid var(--line-strong); background: #151b24; color: var(--text); padding: 0 18px;
+  border-radius: 3px; cursor: pointer; transition: .2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 22px;
+  font-weight: 750; font-size: 12px; letter-spacing: .04em;
+}
+.btn:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.3); }
+.btn.primary { background: var(--green); color: #0b1008; border-color: var(--green); box-shadow: 0 9px 35px rgba(156,255,61,.14); }
+.btn.ghost { background: transparent; }
+.btn.full { width: 100%; }
+.btn.compact { flex: 1; min-height: 39px; padding: 0 10px; font-size: 10px; }
+.hero-meta { margin-top: 88px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+.hero-meta > div { display: flex; align-items: flex-start; gap: 18px; padding: 22px 20px 0 0; border-right: 1px solid var(--line); }
+.hero-meta > div:last-child { border-right: 0; padding-left: 20px; }
+.hero-meta > div:nth-child(2) { padding-left: 20px; }
+.hero-meta span { color: var(--green); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.hero-meta p { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.45; }
+.hero-meta small { color: var(--muted); font-weight: 450; }
+
+.dashboard-wrap { padding: 105px 0; border-top: 1px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,.014), transparent 38%); }
+.section-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin-bottom: 28px; }
+.section-heading h2 { margin: 0; font-size: clamp(34px, 5vw, 60px); letter-spacing: -.055em; }
+.icon-btn, .text-btn { border: 0; background: transparent; color: #9ca6b4; cursor: pointer; padding: 8px; }
+.icon-btn:hover, .text-btn:hover { color: var(--text); }
+
+.dashboard { display: grid; grid-template-columns: 268px minmax(420px, 1fr) 292px; gap: 14px; }
+.panel { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(19,25,35,.94), rgba(11,15,21,.88)); box-shadow: var(--shadow); border-radius: 4px; }
+.control-panel { padding: 22px; }
+.panel-kicker { color: #687384; font-size: 9px; letter-spacing: .18em; font-weight: 800; margin-bottom: 6px; }
+.panel h3 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
+.control-panel form { margin-top: 22px; }
+label { display: block; font-size: 10px; font-weight: 700; color: #8994a4; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; }
+input, select {
+  width: 100%; margin-top: 7px; border: 1px solid var(--line); background: #0a0f15; color: var(--text); border-radius: 2px;
+  padding: 11px 10px; outline: none; text-transform: none; letter-spacing: normal; font-size: 13px;
+}
+input:focus, select:focus { border-color: rgba(156,255,61,.58); box-shadow: 0 0 0 3px rgba(156,255,61,.05); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.divider { display: flex; align-items: center; gap: 10px; margin: 21px 0 13px; color: #5e6978; font-size: 9px; text-transform: uppercase; letter-spacing: .14em; }
+.divider::before, .divider::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.priority-actions { display: flex; gap: 8px; }
+.microcopy { color: #687383; font-size: 10px; line-height: 1.55; margin: 10px 0 0; }
+.match-btn { width: 100%; min-height: 48px; border: 1px solid rgba(69,216,255,.25); background: rgba(69,216,255,.07); color: #a8ecff; font-weight: 800; font-size: 10px; letter-spacing: .08em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; }
+.match-btn:hover { background: rgba(69,216,255,.12); }
+.pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 0 rgba(69,216,255,.45); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(69,216,255,0); } 100% { box-shadow: 0 0 0 0 rgba(69,216,255,0); } }
+
+.visual-panel { padding: 22px; min-height: 570px; overflow: hidden; position: relative; }
+.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.counter { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted); }
+.counter strong { color: var(--green); font-size: 17px; }
+.queue-stage { height: 415px; position: relative; display: grid; place-items: center; margin-top: 20px; }
+.ring-orbit { width: 330px; height: 330px; border: 1px dashed rgba(255,255,255,.09); border-radius: 50%; position: absolute; animation: spin 24s linear infinite; }
+.ring-orbit::before, .ring-orbit::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green); position: absolute; box-shadow: 0 0 12px var(--green); }
+.ring-orbit::before { left: 50%; top: -3px; }
+.ring-orbit::after { left: 50%; bottom: -3px; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.queue-ring { width: 300px; height: 300px; border-radius: 50%; position: relative; }
+.queue-slot { position: absolute; width: 86px; min-height: 54px; transform: translate(-50%, -50%); border: 1px solid var(--line); background: #0c1118; padding: 8px 9px; border-radius: 3px; transition: .22s ease; }
+.queue-slot.occupied { border-color: rgba(156,255,61,.34); background: rgba(156,255,61,.07); box-shadow: 0 0 28px rgba(156,255,61,.06); }
+.queue-slot.is-front { outline: 1px solid rgba(69,216,255,.68); outline-offset: 2px; }
+.queue-slot.is-rear { box-shadow: 0 0 0 2px rgba(255,184,77,.45), 0 0 28px rgba(255,184,77,.08); }
+.slot-index { display: block; color: #4f5a68; font: 8px ui-monospace, monospace; margin-bottom: 4px; }
+.slot-name { display: block; font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-meta { display: block; margin-top: 3px; color: #7e8997; font-size: 8px; }
+.ring-core { width: 116px; height: 116px; border-radius: 50%; border: 1px solid var(--line); background: rgba(8,12,18,.94); display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; box-shadow: inset 0 0 35px rgba(156,255,61,.04); }
+.ring-core::before { content: ""; width: 80px; height: 80px; position: absolute; border-radius: 50%; border: 1px solid rgba(156,255,61,.12); }
+.core-label { font-size: 8px; color: #667180; letter-spacing: .18em; z-index: 1; }
+.ring-core strong { font-size: 16px; margin: 3px 0; color: var(--green); z-index: 1; }
+.ring-core small { font-size: 7px; color: #596574; z-index: 1; }
+.queue-legend { border-top: 1px solid var(--line); padding-top: 14px; display: flex; gap: 20px; color: #6f7a89; font-size: 9px; }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.legend-dot.front { background: var(--cyan); }.legend-dot.rear { background: var(--amber); }.legend-dot.occupied { background: var(--green); }
+
+.side-stack { display: grid; grid-template-rows: 1.16fr .84fr; gap: 14px; }
+.deque-panel, .telemetry-panel { padding: 20px; }
+.deque-ends { display: flex; justify-content: space-between; margin: 29px 4px 8px; color: #576273; font: 8px ui-monospace, monospace; letter-spacing: .12em; }
+.deque-track { min-height: 190px; border-left: 1px dashed rgba(255,255,255,.1); border-right: 1px dashed rgba(255,255,255,.1); padding: 8px; display: flex; flex-direction: column; gap: 7px; }
+.deque-empty { margin: auto; color: #505b69; font-size: 9px; letter-spacing: .12em; }
+.deque-item { min-height: 34px; border: 1px solid rgba(156,124,255,.3); background: rgba(156,124,255,.07); padding: 8px 9px; display: flex; align-items: center; justify-content: space-between; gap: 7px; animation: itemIn .22s ease; }
+.deque-item strong { font-size: 10px; }.deque-item span { font-size: 8px; color: #8678ba; }
+@keyframes itemIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+.deque-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.deque-controls button { min-height: 31px; border: 1px solid var(--line); background: transparent; color: #788493; font-size: 8px; cursor: pointer; }
+.deque-controls button:hover { color: var(--text); border-color: var(--line-strong); }
+.live-tag { padding: 4px 7px; font: 8px ui-monospace, monospace; color: var(--green); border: 1px solid rgba(156,255,61,.22); background: var(--green-soft); }
+.telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; margin-top: 22px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.telemetry-grid div { padding: 15px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.telemetry-grid span { display: block; font-size: 8px; color: #657080; margin-bottom: 5px; }
+.telemetry-grid strong { font: 16px ui-monospace, monospace; }
+
+.lower-grid { display: grid; grid-template-columns: 1.18fr .82fr; gap: 14px; margin-top: 14px; }
+.match-panel, .log-panel { padding: 20px; min-height: 225px; }
+.match-id { font: 9px ui-monospace, monospace; color: #697586; }
+.match-slots { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 26px; }
+.match-slot { border: 1px solid var(--line); background: #0b1016; min-height: 122px; display: flex; flex-direction: column; justify-content: end; padding: 12px; position: relative; overflow: hidden; }
+.match-slot::before { content: attr(data-slot); position: absolute; right: 8px; top: 5px; font: 34px ui-monospace, monospace; color: rgba(255,255,255,.025); }
+.match-slot.filled { border-color: rgba(69,216,255,.26); background: linear-gradient(180deg, rgba(69,216,255,.03), rgba(69,216,255,.075)); }
+.player-avatar { width: 30px; height: 30px; border: 1px solid rgba(69,216,255,.35); background: rgba(69,216,255,.08); display: grid; place-items: center; color: var(--cyan); font-weight: 900; font-size: 11px; margin-bottom: 12px; }
+.match-slot strong { font-size: 11px; }.match-slot span { color: #6f7b8a; font-size: 8px; margin-top: 3px; }
+.empty-slot { color: #4d5866; font-size: 9px; }
+.log-list { margin-top: 18px; height: 157px; overflow: auto; padding-right: 6px; }
+.log-entry { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.05); font: 9px ui-monospace, monospace; }
+.log-entry time { color: #4e5a68; }.log-entry span { color: #8d98a6; }.log-entry b { color: var(--green); font-weight: 650; }
+.log-empty { color: #4f5a67; font-size: 9px; padding-top: 24px; }
+
+.structures { padding: 120px 0; }
+.split-heading > p { max-width: 420px; color: var(--muted); line-height: 1.7; font-size: 14px; }
+.structure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 40px; }
+.structure-card { position: relative; overflow: hidden; min-height: 440px; padding: 32px; border: 1px solid var(--line); background: #0c1118; }
+.structure-card::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; right: -90px; top: -90px; background: radial-gradient(circle, rgba(156,255,61,.1), transparent 70%); }
+.dq-card::after { background: radial-gradient(circle, rgba(156,124,255,.12), transparent 70%); }
+.index { position: absolute; right: 26px; top: 22px; color: #3f4956; font: 12px ui-monospace, monospace; }
+.structure-icon { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid rgba(156,255,61,.25); color: var(--green); font-size: 25px; margin-bottom: 60px; }
+.dq-card .structure-icon { color: var(--purple); border-color: rgba(156,124,255,.3); }
+.structure-card h3 { font-size: 30px; letter-spacing: -.045em; margin: 0 0 14px; }
+.structure-card p { color: #8792a1; line-height: 1.75; max-width: 470px; font-size: 13px; }
+.code-strip { border: 1px solid var(--line); background: #080c11; margin: 24px 0; padding: 13px 14px; color: #a8b2bf; overflow-x: auto; }
+.code-strip code { font-size: 11px; color: #a7f35d; }
+.dq-card .code-strip code { color: #b9a8ff; }
+.structure-card ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 11px; color: #707b89; font-size: 11px; }
+.structure-card li span { color: #c7ced7; display: inline-block; min-width: 125px; font-family: ui-monospace, monospace; }
+
+.about { padding: 0 0 120px; }
+.about-card { border: 1px solid var(--line); padding: clamp(28px, 5vw, 58px); background: linear-gradient(135deg, rgba(156,255,61,.055), rgba(255,255,255,.01) 45%); }
+.about-card > div:first-child { display: flex; justify-content: space-between; gap: 30px; align-items: flex-start; }
+.about-card h2 { margin: 0; max-width: 650px; font-size: clamp(38px, 6vw, 70px); letter-spacing: -.06em; line-height: .95; }
+.about-copy { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--line); }
+.about-copy p { color: #909baa; line-height: 1.8; font-size: 13px; margin: 0; }
+.author-grid { display: grid; grid-template-columns: .8fr .5fr 1.3fr 1.4fr; gap: 1px; background: var(--line); margin-top: 40px; border: 1px solid var(--line); }
+.author-grid div { background: #0b1016; padding: 16px; }
+.author-grid span { display: block; color: #586473; font-size: 8px; letter-spacing: .12em; margin-bottom: 5px; }
+.author-grid strong { font-size: 11px; font-weight: 700; }
+.footer { padding: 28px 0 38px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: #596472; font-size: 9px; letter-spacing: .08em; }
+
+.toast { position: fixed; right: 20px; bottom: 20px; z-index: 40; max-width: 320px; padding: 12px 14px; background: #151d27; border: 1px solid var(--line-strong); color: #dce3eb; font-size: 11px; box-shadow: var(--shadow); transform: translateY(20px); opacity: 0; pointer-events: none; transition: .22s ease; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { border-color: rgba(255,93,117,.4); color: #ffb8c4; }
+
+@media (max-width: 1050px) {
+  .dashboard { grid-template-columns: 240px 1fr; }
+  .side-stack { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
+  .deque-track { min-height: 110px; }
+  .deque-item { flex-direction: row; }
+  .author-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 760px) {
+  .section-shell { width: min(100% - 24px, 1180px); }
+  .topbar { height: 64px; padding: 0 14px; }
+  .nav { display: none; }
+  .status-pill { font-size: 8px; }
+  .hero { min-height: auto; padding: 85px 0 55px; }
+  .hero h1 { font-size: clamp(57px, 18vw, 90px); }
+  .hero-copy { font-size: 15px; }
+  .hero-meta { grid-template-columns: 1fr; margin-top: 60px; }
+  .hero-meta > div, .hero-meta > div:nth-child(2), .hero-meta > div:last-child { border-right: 0; border-bottom: 1px solid var(--line); padding: 16px 0; }
+  .dashboard-wrap, .structures { padding: 78px 0; }
+  .section-heading { align-items: flex-start; }
+  .dashboard { grid-template-columns: 1fr; }
+  .control-panel { order: 1; }
+  .visual-panel { order: 2; min-height: 520px; }
+  .side-stack { order: 3; grid-column: auto; grid-template-columns: 1fr; }
+  .queue-stage { transform: scale(.9); height: 390px; margin: 0 -20px; }
+  .lower-grid { grid-template-columns: 1fr; }
+  .match-slots { grid-template-columns: 1fr 1fr; }
+  .structure-grid { grid-template-columns: 1fr; }
+  .split-heading { flex-direction: column; align-items: flex-start; }
+  .about-copy { grid-template-columns: 1fr; gap: 16px; }
+  .author-grid { grid-template-columns: 1fr; }
+  .footer { flex-direction: column; gap: 8px; }
+}
+
+@media (max-width: 420px) {
+  .status-pill { display: none; }
+  .queue-stage { transform: scale(.78); height: 350px; margin: -10px -48px 0; }
+  .visual-panel { min-height: 470px; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="MatchCore home">
+      <span class="brand-mark">M</span>
+      <span>MatchCore<span class="brand-dot">.</span></span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#simulator">Simulator</a>
+      <a href="#structures">Structures</a>
+      <a href="#about">About</a>
+    </nav>
+    <div class="status-pill"><span class="status-dot"></span> SYSTEM ONLINE</div>
+  </header>
+
+  <main id="top">
+    <section class="hero section-shell">
+      <div class="eyebrow">DSA × JAVA PROJECT CONCEPT</div>
+      <h1>Matchmaking,<br /><span>visualized.</span></h1>
+      <p class="hero-copy">
+        An interactive multiplayer lobby that demonstrates how a <strong>Circular Queue</strong>
+        handles regular players while a <strong>Deque</strong> handles priority and reconnect players.
+      </p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#simulator">Launch simulator <span>↗</span></a>
+        <button class="btn ghost" id="loadDemoBtn" type="button">Load demo data</button>
+      </div>
+      <div class="hero-meta">
+        <div><span>01</span><p>Circular Queue<br /><small>Normal matchmaking</small></p></div>
+        <div><span>02</span><p>Deque<br /><small>Priority lane</small></p></div>
+        <div><span>03</span><p>FIFO + Double Ended<br /><small>Real-time visualization</small></p></div>
+      </div>
+    </section>
+
+    <section class="dashboard-wrap" id="simulator">
+      <div class="section-heading section-shell">
+        <div>
+          <div class="eyebrow">LIVE SIMULATOR</div>
+          <h2>Matchmaking control room</h2>
+        </div>
+        <button class="icon-btn" id="resetBtn" type="button" title="Reset simulation">↻ Reset</button>
+      </div>
+
+      <div class="dashboard section-shell">
+        <aside class="control-panel panel">
+          <div class="panel-kicker">PLAYER INTAKE</div>
+          <h3>Add a player</h3>
+          <form id="playerForm">
+            <label>
+              Player tag
+              <input id="playerName" type="text" maxlength="14" placeholder="e.g. NovaX" autocomplete="off" required />
+            </label>
+            <div class="form-row">
+              <label>
+                Skill
+                <select id="playerSkill">
+                  <option>Bronze</option>
+                  <option>Silver</option>
+                  <option selected>Gold</option>
+                  <option>Platinum</option>
+                  <option>Diamond</option>
+                </select>
+              </label>
+              <label>
+                Region
+                <select id="playerRegion">
+                  <option selected>ASIA</option>
+                  <option>EU</option>
+                  <option>NA</option>
+                </select>
+              </label>
+            </div>
+            <button class="btn primary full" type="submit">Enqueue normal player</button>
+          </form>
+
+          <div class="divider"><span>priority lane</span></div>
+          <div class="priority-actions">
+            <button class="btn compact" id="addFrontBtn" type="button">+ Deque front</button>
+            <button class="btn compact" id="addRearBtn" type="button">+ Deque rear</button>
+          </div>
+          <p class="microcopy">Use the current player tag, skill and region. Front = reconnect/VIP priority; rear = lower-priority special entry.</p>
+
+          <div class="divider"><span>match control</span></div>
+          <button class="match-btn" id="createMatchBtn" type="button">
+            <span class="pulse"></span>
+            CREATE 4-PLAYER MATCH
+          </button>
+          <p class="microcopy">Priority deque is consumed first, then the Circular Queue fills remaining slots.</p>
+        </aside>
+
+        <section class="visual-panel panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">CIRCULAR QUEUE</div>
+              <h3>Normal lobby</h3>
+            </div>
+            <div class="counter"><strong id="cqCount">0</strong><span>/ 8</span></div>
+          </div>
+
+          <div class="queue-stage">
+            <div class="ring-orbit" aria-hidden="true"></div>
+            <div class="queue-ring" id="queueRing" aria-label="Circular queue visualization"></div>
+            <div class="ring-core">
+              <span class="core-label">QUEUE</span>
+              <strong id="queueStateText">EMPTY</strong>
+              <small>wrap-around enabled</small>
+            </div>
+          </div>
+
+          <div class="queue-legend">
+            <span><i class="legend-dot front"></i> Front</span>
+            <span><i class="legend-dot rear"></i> Rear</span>
+            <span><i class="legend-dot occupied"></i> Occupied</span>
+          </div>
+        </section>
+
+        <section class="side-stack">
+          <div class="panel deque-panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-kicker">DEQUE</div>
+                <h3>Priority lane</h3>
+              </div>
+              <div class="counter"><strong id="dqCount">0</strong><span>/ 6</span></div>
+            </div>
+            <div class="deque-ends"><span>FRONT</span><span>REAR</span></div>
+            <div class="deque-track" id="dequeTrack"></div>
+            <div class="deque-controls">
+              <button id="removeFrontBtn" type="button">Remove front</button>
+              <button id="removeRearBtn" type="button">Remove rear</button>
+            </div>
+          </div>
+
+          <div class="panel telemetry-panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-kicker">TELEMETRY</div>
+                <h3>Session status</h3>
+              </div>
+              <span class="live-tag">LIVE</span>
+            </div>
+            <div class="telemetry-grid">
+              <div><span>Matches</span><strong id="matchCount">0</strong></div>
+              <div><span>Players matched</span><strong id="matchedCount">0</strong></div>
+              <div><span>Queue ops</span><strong id="opCount">0</strong></div>
+              <div><span>Avg. fill</span><strong id="fillRate">0%</strong></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="lower-grid section-shell">
+        <section class="panel match-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">LATEST MATCH</div>
+              <h3>Squad formation</h3>
+            </div>
+            <span class="match-id" id="matchId">NO MATCH</span>
+          </div>
+          <div class="match-slots" id="matchSlots"></div>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">OPERATION LOG</div>
+              <h3>Data structure trace</h3>
+            </div>
+            <button class="text-btn" id="clearLogBtn" type="button">Clear</button>
+          </div>
+          <div class="log-list" id="logList" aria-live="polite"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="structures section-shell" id="structures">
+      <div class="section-heading split-heading">
+        <div>
+          <div class="eyebrow">WHY THESE STRUCTURES?</div>
+          <h2>Two queues. Two jobs.</h2>
+        </div>
+        <p>Instead of using two structures artificially, MatchCore gives each one a clear responsibility inside the same real-life system.</p>
+      </div>
+
+      <div class="structure-grid">
+        <article class="structure-card cq-card">
+          <span class="index">01</span>
+          <div class="structure-icon">↻</div>
+          <h3>Circular Queue</h3>
+          <p>Regular players enter at the rear and leave from the front. Freed array positions are reused by wrapping around.</p>
+          <div class="code-strip"><code>rear = (rear + 1) % capacity</code></div>
+          <ul>
+            <li><span>enqueue()</span> Add normal player</li>
+            <li><span>dequeue()</span> Send player to match</li>
+            <li><span>front / rear</span> Track active boundaries</li>
+          </ul>
+        </article>
+
+        <article class="structure-card dq-card">
+          <span class="index">02</span>
+          <div class="structure-icon">⇆</div>
+          <h3>Deque</h3>
+          <p>Reconnect or high-priority players can enter from the front, while lower-priority special players can enter from the rear.</p>
+          <div class="code-strip"><code>addFront() · addRear() · removeFront()</code></div>
+          <ul>
+            <li><span>addFront()</span> VIP / reconnect</li>
+            <li><span>addRear()</span> Special queue entry</li>
+            <li><span>removeBothEnds()</span> Flexible control</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="about section-shell" id="about">
+      <div class="about-card">
+        <div>
+          <div class="eyebrow">PROJECT ABSTRACT — WEB DEMO</div>
+          <h2>Multiplayer Game Matchmaking System</h2>
+        </div>
+        <div class="about-copy">
+          <p>
+            MatchCore is a frontend simulation of the Java DSA project concept. It demonstrates how a Circular Queue can manage regular matchmaking efficiently while a Deque handles reconnect and priority cases.
+          </p>
+          <p>
+            The browser version visualizes every operation so the logic is easy to explain during a project demo or viva. The same operations map directly to array-based Circular Queue and Deque implementations in Java.
+          </p>
+        </div>
+        <div class="author-grid">
+          <div><span>STUDENT</span><strong>Nandhan PK</strong></div>
+          <div><span>ROLL NO.</span><strong>18</strong></div>
+          <div><span>DEPARTMENT</span><strong>Computer Science & Engineering</strong></div>
+          <div><span>COLLEGE</span><strong>Amal Jyothi College of Engineering</strong></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer section-shell">
+    <span>MatchCore / DSA Mini Project</span>
+    <span>Built with HTML · CSS · JavaScript</span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+const CQ_CAPACITY = 8;
+const DQ_CAPACITY = 6;
+
+const state = {
+  cq: Array(CQ_CAPACITY).fill(null),
+  front: -1,
+  rear: -1,
+  cqCount: 0,
+  deque: [],
+  matches: 0,
+  matched: 0,
+  operations: 0,
+  latestMatch: [],
+  logs: []
+};
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  playerForm: $("playerForm"),
+  playerName: $("playerName"),
+  playerSkill: $("playerSkill"),
+  playerRegion: $("playerRegion"),
+  queueRing: $("queueRing"),
+  dequeTrack: $("dequeTrack"),
+  cqCount: $("cqCount"),
+  dqCount: $("dqCount"),
+  queueStateText: $("queueStateText"),
+  matchCount: $("matchCount"),
+  matchedCount: $("matchedCount"),
+  opCount: $("opCount"),
+  fillRate: $("fillRate"),
+  matchSlots: $("matchSlots"),
+  matchId: $("matchId"),
+  logList: $("logList"),
+  toast: $("toast")
+};
+
+function makePlayer(source = "NORMAL") {
+  const name = els.playerName.value.trim() || randomName();
+  return {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name,
+    skill: els.playerSkill.value,
+    region: els.playerRegion.value,
+    source
+  };
+}
+
+function randomName() {
+  const names = ["NovaX", "Kairo", "Vexel", "Rift", "Pixel", "Onyx", "Echo7", "Zer0", "Astra", "Drift", "Nexus", "Blitz"];
+  return names[Math.floor(Math.random() * names.length)];
+}
+
+function enqueue(player) {
+  if (state.cqCount === CQ_CAPACITY) return notify("Circular Queue is full — dequeue or create a match first.", true);
+
+  if (state.cqCount === 0) {
+    state.front = 0;
+    state.rear = 0;
+  } else {
+    state.rear = (state.rear + 1) % CQ_CAPACITY;
+  }
+
+  state.cq[state.rear] = player;
+  state.cqCount++;
+  op(`ENQUEUE`, `${player.name} → CQ[${state.rear}]`);
+  render();
+  notify(`${player.name} joined the normal matchmaking queue.`);
+}
+
+function dequeue() {
+  if (state.cqCount === 0) return null;
+  const index = state.front;
+  const player = state.cq[index];
+  state.cq[index] = null;
+
+  if (state.cqCount === 1) {
+    state.front = -1;
+    state.rear = -1;
+  } else {
+    state.front = (state.front + 1) % CQ_CAPACITY;
+  }
+
+  state.cqCount--;
+  op(`DEQUEUE`, `${player.name} ← CQ[${index}]`);
+  return player;
+}
+
+function addDeque(where, player) {
+  if (state.deque.length === DQ_CAPACITY) return notify("Priority Deque is full.", true);
+  player.source = where === "front" ? "PRIORITY-FRONT" : "PRIORITY-REAR";
+  if (where === "front") state.deque.unshift(player);
+  else state.deque.push(player);
+  op(where === "front" ? "ADD_FRONT" : "ADD_REAR", `${player.name} → priority deque`);
+  render();
+  notify(`${player.name} added to deque ${where}.`);
+}
+
+function removeDeque(where, silent = false) {
+  if (!state.deque.length) {
+    if (!silent) notify("Priority Deque is empty.", true);
+    return null;
+  }
+  const player = where === "front" ? state.deque.shift() : state.deque.pop();
+  op(where === "front" ? "REMOVE_FRONT" : "REMOVE_REAR", `${player.name} removed from deque`);
+  render();
+  if (!silent) notify(`${player.name} removed from deque ${where}.`);
+  return player;
+}
+
+function createMatch() {
+  const available = state.deque.length + state.cqCount;
+  if (available < 4) return notify(`Need 4 players to create a match — currently ${available}.`, true);
+
+  const squad = [];
+  while (squad.length < 4 && state.deque.length) squad.push(removeDeque("front", true));
+  while (squad.length < 4 && state.cqCount) squad.push(dequeue());
+
+  state.matches++;
+  state.matched += squad.length;
+  state.latestMatch = squad;
+  op("MATCH", `M-${String(state.matches).padStart(3, "0")} formed with ${squad.map(p => p.name).join(", ")}`);
+  render();
+  notify(`Match M-${String(state.matches).padStart(3, "0")} created.`);
+}
+
+function op(type, message) {
+  state.operations++;
+  state.logs.unshift({ type, message, time: new Date() });
+  state.logs = state.logs.slice(0, 40);
+}
+
+function render() {
+  renderCircularQueue();
+  renderDeque();
+  renderMatch();
+  renderTelemetry();
+  renderLog();
+}
+
+function renderCircularQueue() {
+  els.queueRing.innerHTML = "";
+  const radius = window.innerWidth < 420 ? 128 : 143;
+  const center = 150;
+
+  state.cq.forEach((player, i) => {
+    const angle = (i / CQ_CAPACITY) * Math.PI * 2 - Math.PI / 2;
+    const x = center + Math.cos(angle) * radius;
+    const y = center + Math.sin(angle) * radius;
+    const slot = document.createElement("div");
+    slot.className = "queue-slot" + (player ? " occupied" : "");
+    if (state.cqCount && i === state.front) slot.classList.add("is-front");
+    if (state.cqCount && i === state.rear) slot.classList.add("is-rear");
+    slot.style.left = `${x}px`;
+    slot.style.top = `${y}px`;
+    slot.innerHTML = `
+      <span class="slot-index">[${i}]${i === state.front && state.cqCount ? " · F" : ""}${i === state.rear && state.cqCount ? " · R" : ""}</span>
+      <span class="slot-name">${player ? escapeHTML(player.name) : "— empty —"}</span>
+      <span class="slot-meta">${player ? `${player.skill} · ${player.region}` : "available"}</span>`;
+    els.queueRing.appendChild(slot);
+  });
+
+  els.cqCount.textContent = state.cqCount;
+  els.queueStateText.textContent = state.cqCount === 0 ? "EMPTY" : state.cqCount === CQ_CAPACITY ? "FULL" : "ACTIVE";
+}
+
+function renderDeque() {
+  els.dequeTrack.innerHTML = "";
+  if (!state.deque.length) {
+    const empty = document.createElement("div");
+    empty.className = "deque-empty";
+    empty.textContent = "DEQUE EMPTY";
+    els.dequeTrack.appendChild(empty);
+  } else {
+    state.deque.forEach((player, i) => {
+      const item = document.createElement("div");
+      item.className = "deque-item";
+      item.innerHTML = `<strong>${escapeHTML(player.name)}</strong><span>${i === 0 ? "FRONT" : i === state.deque.length - 1 ? "REAR" : player.skill.toUpperCase()}</span>`;
+      els.dequeTrack.appendChild(item);
+    });
+  }
+  els.dqCount.textContent = state.deque.length;
+}
+
+function renderMatch() {
+  els.matchSlots.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const player = state.latestMatch[i];
+    const slot = document.createElement("div");
+    slot.className = `match-slot${player ? " filled" : ""}`;
+    slot.dataset.slot = String(i + 1).padStart(2, "0");
+    if (player) {
+      slot.innerHTML = `<div class="player-avatar">${escapeHTML(player.name[0].toUpperCase())}</div><strong>${escapeHTML(player.name)}</strong><span>${player.skill} · ${player.region}<br>${player.source.replaceAll("-", " ")}</span>`;
+    } else {
+      slot.innerHTML = `<div class="empty-slot">Waiting for match...</div>`;
+    }
+    els.matchSlots.appendChild(slot);
+  }
+  els.matchId.textContent = state.matches ? `M-${String(state.matches).padStart(3, "0")}` : "NO MATCH";
+}
+
+function renderTelemetry() {
+  els.matchCount.textContent = state.matches;
+  els.matchedCount.textContent = state.matched;
+  els.opCount.textContent = state.operations;
+  const fill = Math.round(((state.cqCount + state.deque.length) / (CQ_CAPACITY + DQ_CAPACITY)) * 100);
+  els.fillRate.textContent = `${fill}%`;
+}
+
+function renderLog() {
+  els.logList.innerHTML = "";
+  if (!state.logs.length) {
+    els.logList.innerHTML = `<div class="log-empty">No operations yet. Add a player to begin the trace.</div>`;
+    return;
+  }
+  state.logs.forEach(entry => {
+    const row = document.createElement("div");
+    row.className = "log-entry";
+    row.innerHTML = `<time>${entry.time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time><span><b>${entry.type}</b> ${escapeHTML(entry.message)}</span>`;
+    els.logList.appendChild(row);
+  });
+}
+
+function notify(message, error = false) {
+  els.toast.textContent = message;
+  els.toast.className = `toast show${error ? " error" : ""}`;
+  clearTimeout(notify.timer);
+  notify.timer = setTimeout(() => (els.toast.className = "toast"), 2300);
+}
+
+function reset() {
+  Object.assign(state, {
+    cq: Array(CQ_CAPACITY).fill(null), front: -1, rear: -1, cqCount: 0,
+    deque: [], matches: 0, matched: 0, operations: 0, latestMatch: [], logs: []
+  });
+  render();
+  notify("Simulation reset.");
+}
+
+function loadDemo() {
+  reset();
+  const demo = [
+    ["NovaX", "Gold", "ASIA"], ["Kairo", "Platinum", "ASIA"], ["Rift", "Gold", "EU"],
+    ["Echo7", "Diamond", "ASIA"], ["Vexel", "Silver", "NA"]
+  ];
+  demo.forEach(([name, skill, region]) => enqueue({ id: crypto.randomUUID?.() || Math.random(), name, skill, region, source: "NORMAL" }));
+  addDeque("front", { id: Math.random(), name: "Reconn_9", skill: "Platinum", region: "ASIA", source: "PRIORITY-FRONT" });
+  addDeque("rear", { id: Math.random(), name: "VIP_Ace", skill: "Diamond", region: "EU", source: "PRIORITY-REAR" });
+  notify("Demo lobby loaded. Try creating a match.");
+  document.querySelector("#simulator").scrollIntoView({ behavior: "smooth" });
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch]));
+}
+
+els.playerForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  enqueue(makePlayer());
+  els.playerName.value = "";
+  els.playerName.focus();
+});
+
+$("addFrontBtn").addEventListener("click", () => addDeque("front", makePlayer("PRIORITY-FRONT")));
+$("addRearBtn").addEventListener("click", () => addDeque("rear", makePlayer("PRIORITY-REAR")));
+$("removeFrontBtn").addEventListener("click", () => removeDeque("front"));
+$("removeRearBtn").addEventListener("click", () => removeDeque("rear"));
+$("createMatchBtn").addEventListener("click", createMatch);
+$("resetBtn").addEventListener("click", reset);
+$("loadDemoBtn").addEventListener("click", loadDemo);
+$("clearLogBtn").addEventListener("click", () => { state.logs = []; renderLog(); });
+window.addEventListener("resize", renderCircularQueue);
+
+render();
+
+</script>
+</body>
+</html>
